@@ -10,7 +10,6 @@ RUN pip install --no-cache-dir \
     scipy>=1.10.0 \
     rich>=13.0.0 \
     openai>=1.0.0 \
-    flask>=2.0.0 \
     gradio>=4.0.0
 
 # Copy all application files
@@ -19,5 +18,5 @@ COPY inference.py app.py requirements.txt ./
 
 EXPOSE 7860
 
-# Run Flask server by default
-CMD ["python", "server.py"]
+# Run Gradio app for HuggingFace Spaces
+CMD ["python", "app.py"]
