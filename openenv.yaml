@@ -1,0 +1,51 @@
+name: DataClean-Ops
+version: "1.0.0"
+type: data-engineering
+description: |
+  Professional data engineering training environment for RL agents.
+  Tasks: missing values (Easy), format normalization (Medium), outlier detection (Hard).
+  API: step()/reset()/state() - OpenEnv compliant.
+challenge: meta-openenv
+tags:
+  - data-cleaning
+  - data-engineering
+  - reinforcement-learning
+  - openenv
+  - machine-learning
+author: AI Engineer
+license: MIT
+entry_point: env.py
+framework_version: ">=1.0.0"
+runtime: python3.11
+actions:
+  - clean_nulls
+  - format_date
+  - drop_duplicates
+  - merge_tables
+  - remove_outliers
+  - normalize_currency
+  - validate
+tasks:
+  - easy
+  - medium
+  - hard
+observation:
+  task: string
+  step: integer
+  max_steps: integer
+  tables: object
+  active_table: string
+  action_history: array
+  reward_accumulated: float
+grader:
+  score_range: [0.0, 1.0]
+  tasks:
+    easy:
+      name: Missing Value Handling
+      max_reward: 1.0
+    medium:
+      name: Format Normalization
+      max_reward: 1.0
+    hard:
+      name: Outlier Detection
+      max_reward: 1.0
