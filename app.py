@@ -33,7 +33,10 @@ def action_from_dict(data):
 @app.route("/reset", methods=["POST"])
 def reset():
     global env
-    data = request.json or {}
+    if request.is_json:
+        data = request.json or {}
+    else:
+        data = request.form.to_dict() or {}
     difficulty = data.get("difficulty", "easy")
     env = create_env(difficulty)
     obs = env.reset()
@@ -46,7 +49,10 @@ def step():
     if env is None:
         env = create_env("easy")
         env.reset()
-    data = request.json or {}
+    if request.is_json:
+        data = request.json or {}
+    else:
+        data = request.form.to_dict() or {}
     action = action_from_dict(data)
     result = env.step(action)
     return jsonify({
