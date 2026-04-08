@@ -56,6 +56,10 @@ class ActionParams(BaseModel):
 class Action(BaseModel):
     action_type: ActionType
     params: ActionParams = Field(default_factory=ActionParams)
+    
+    @property
+    def type(self):
+        return self.action_type
 
 
 class Reward(BaseModel):
