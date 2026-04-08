@@ -1,116 +1,96 @@
 """
-DataClean-Ops - Hugging Face Spaces Deployment
-=============================================
-RL Environment for Data Engineering
+DataClean-Ops - Hugging Face Spaces
+===================================
+Simple OpenEnv Interface
 """
 
-import os
-import sys
-sys.path.insert(0, ".")
-
+import gradio as gr
 from env import create_env
 from models import Action, ActionType, ActionParams
-import gradio as gr
 
-# Global environment instance
-_env = None
+# Initialize environment
+env = create_env("easy")
+initial_state = env.reset()
 
-def get_env():
-    global _env
-    if _env is None:
-        _env = create_env("easy")
-        _env.reset()
-    return _env
+def reset_environment(difficulty):
+    """Reset the environment."""
+    global env
+    env = create_env(difficulty)
+    obs = env.reset()
+    return f"Reset to {difficulty}. Step: {obs.step}, Tables: {list(obs.tables.keys())}"
 
-def reset_env(difficulty):
-    """Reset environment to initial state."""
-    global _env
-    _env = create_env(difficulty)
-    obs = _env.reset()
-    return {
-        "status": "reset",
-        "task": obs.task,
-        "step": obs.step,
-        "max_steps": obs.max_steps,
-        "tables": list(obs.tables.keys()),
-        "reward": 0.0,
-        "message": f"Environment reset to {difficulty}"
-    }
-
-def execute_action(action_type, strategy, threshold):
-    """Execute an action and return result."""
-    env = get_env()
+def execute_action(action_type):
+    """Execute an action in the environment."""
+    global env
+    
     try:
-        action = Action(
-            action_type=ActionType(action_type),
-            params=ActionParams(strategy=strategy, threshold=float(threshold))
-        )
-        result = env.step(action)
-        
-        return {
-            "step": result.observation.step,
-            "reward": result.reward.value,
-            "total_reward": result.observation.reward_accumulated,
-            "message": result.reward.reason,
-            "solved": result.reward.solved,
-            "done": result.done,
-            "tables": list(result.observation.tables.keys())
-        }
-    except Exception as e:
-        return {"error": str(e), "step": env.step_count}
+        action_enum = ActionType(action_type)
+    except:
+        action_enum = ActionType.VALIDATE
+    
+    action = Action(action_type=action_enum, params=ActionParams())
+    result = env.step(action)
+    
+    obs = result.observation
+    reward = result.reward
+    
+    output = f"""
+Step: {obs.step}
+Action: {action_type}
+Reward: {reward.value:+.2f}
+Total Reward: {obs.reward_accumulated:.2f}
+Message: {reward.reason}
+Solved: {reward.solved}
+Done: {result.done}
+Tables: {list(obs.tables.keys())}
+"""
+    return output
 
 def get_state():
-    """Get current environment state."""
-    env = get_env()
+    """Get current state."""
     obs = env.state()
-    return {
-        "task": obs.task,
-        "step": obs.step,
-        "max_steps": obs.max_steps,
-        "tables": list(obs.tables.keys()),
-        "reward_accumulated": obs.reward_accumulated,
-        "action_history": obs.action_history
-    }
+    return f"Task: {obs.task}, Step: {obs.step}/{obs.max_steps}, Reward: {obs.reward_accumulated:.2f}"
 
-# Build Gradio Interface
-with gr.Blocks(title="DataClean-Ops - RL Environment") as demo:
-    gr.Markdown("# DataClean-Ops: RL Environment for Data Engineering")
-    gr.Markdown("## OpenEnv Compliant - Step/Reset/State API")
+# Create Gradio Interface
+with gr.Blocks(title="DataClean-Ops") as demo:
+    gr.Markdown("# DataClean-Ops: RL Data Engineering Environment")
+    gr.Markdown("## Meta OpenEnv Challenge")
     
     with gr.Row():
         with gr.Column():
             gr.Markdown("### Configuration")
-            difficulty = gr.Dropdown(
-                ["easy", "medium", "hard"], 
-                label="Task Difficulty", 
+            difficulty_dropdown = gr.Dropdown(
+                ["easy", "medium", "hard"],
+                label="Difficulty",
                 value="easy"
             )
-            reset_btn = gr.Button("Reset Environment", variant="secondary")
+            reset_btn = gr.Button("Reset Environment")
         
         with gr.Column():
             gr.Markdown("### Actions")
-            action_type = gr.Dropdown(
-                ["clean_nulls", "format_date", "drop_duplicates", "merge_tables", 
+            action_dropdown = gr.Dropdown(
+                ["clean_nulls", "format_date", "drop_duplicates", "merge_tables",
                  "remove_outliers", "normalize_currency", "validate"],
                 label="Select Action",
                 value="clean_nulls"
             )
-            strategy = gr.Textbox(value="drop", label="Strategy (drop/fill)")
-            threshold = gr.Slider(1.0, 5.0, 3.0, label="Outlier Threshold")
-            submit_btn = gr.Button("Execute Action", variant="primary")
+            action_btn = gr.Button("Execute Action")
     
     gr.Markdown("---")
     
     with gr.Row():
-        gr.Markdown("### Result Output")
-        output = gr.JSON(label="Execution Result")
-    
-    # Event handlers
-    reset_btn.click(reset_env, inputs=[difficulty], outputs=[output])
-    submit_btn.click(execute_action, inputs=[action_type, strategy, threshold], outputs=[output])
+        gr.Markdown("### Current State:")
+        state_output = gr.Textbox(label="State", value=get_state(), lines=3)
     
     gr.Markdown("---")
-    gr.Markdown("*Built for Meta OpenEnv Challenge - Data Engineering Task*")
+    
+    with gr.Row():
+        gr.Markdown("### Result:")
+        result_output = gr.Textbox(label="Result", lines=6)
+    
+    # Button clicks
+    reset_btn.click(reset_environment, inputs=[difficulty_dropdown], outputs=[state_output])
+    action_btn.click(execute_action, inputs=[action_dropdown], outputs=[result_output])
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=True)
+    demo.launch(server_name="0.0.0.0", server_port=7860)
